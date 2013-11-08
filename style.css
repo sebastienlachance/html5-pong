@@ -1,0 +1,19 @@
+body {
+	background-color: #303030;
+}
+
+h1 {
+	font-family: helvetica;
+	color: white;
+	margin: 0 auto;
+	width:800px;
+}
+
+#gameCanvas {
+	background-color: #000;
+	margin: 50px auto;
+	width: 800px;
+	height: 500px;
+	display:block;
+	border: 1px solid white;
+}
