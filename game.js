@@ -5,6 +5,19 @@ var key = {
 	s: 83,
 }
 
+function Ball(x, y, ctx) {
+	this.x = x;
+	this.y = y;
+	this.ctx = ctx;
+
+	this.render = function() {
+		this.ctx.beginPath();
+		this.ctx.arc(this.x, this.y, 5,0,2*Math.PI);
+		this.ctx.closePath();
+		this.ctx.fill();
+	}.bind(this);
+}
+
 function Paddle(x, y, ctx) {
 
 	this.ctx = ctx;
@@ -13,7 +26,7 @@ function Paddle(x, y, ctx) {
 
 	this.render = function() {
 		this.ctx.fillStyle = "green";
-		this.ctx.fillRect(this.x, this.y, 10, 40);
+		this.ctx.fillRect(this.x, this.y, 5, 40);
 	}.bind(this);
 
 	this.update = function(keys) {
@@ -48,16 +61,20 @@ function Pong() {
 		
 		var leftBar = new Paddle(10, 10, this.ctx)
 		var rightBar = new Paddle(this.canvas.width - 20, 10, this.ctx);
+		var ball = new Ball(50, 50, this.ctx);
 		
-		leftBar.render();
-		rightBar.render();	
+
 
 		(function animloop(time){
 			requestAnimationFrame(animloop);
 			game.clearCanvas();
+
+			  game.ctx.fillRect(game.canvas.width/2, 0, 2, game.canvas.height);
+
 			leftBar.update(game.keys);
 			leftBar.render();
 			rightBar.render();	
+			ball.render();
 		})();
 		
 	};
