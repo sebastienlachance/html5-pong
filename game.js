@@ -12,6 +12,7 @@ var key = {
 function Ball(x, y, ctx, game) {
 	this.startingX = x;
 	this.startingY = y;
+	this.startingSpeed = 4;
 	this.x = x;
 	this.y = y;
 	this.vx = 1;
@@ -26,12 +27,15 @@ function Ball(x, y, ctx, game) {
 
 		this.vx = getRandomInt(1, 2) == 1 ? 1 : -1;
 		this.vy = getRandomInt(1, 2) == 1 ? 1 : -1; 
+
+		this.speed = this.startingSpeed;
 		
 	}.bind(this);
 
 	this.reverse = function() {
 		this.vx = -this.vx;
 		this.vy = -this.vy;
+		this.speed += 0.5;	
 	}.bind(this);
 
 	this.render = function() {
@@ -64,28 +68,45 @@ function Ball(x, y, ctx, game) {
 	}.bind(this);
 }
 
-function Paddle(x, y, ctx) {
+function Paddle(x, y, ctx, aiControlled, game) {
 
+	this.game = game;
 	this.ctx = ctx;
 	this.x = x;
 	this.y = y;
 	this.speed = 5;
 	this.score = 0;
+	this.aiControlled = aiControlled;
+	this.height = 70;
 
 	this.render = function() {
 		this.ctx.fillStyle = "green";
-		this.ctx.fillRect(this.x, this.y, 5, 50);
+		this.ctx.fillRect(this.x, this.y, 5, this.height);
 	}.bind(this);
 
-	this.update = function(keys) {
-		if (keys[key.up] || keys[key.w]) {
-			this.y-= this.speed;
-		}
+	if (this.aiControlled) {
+		this.update = function(keys, ball) {
+			if (ball.y >= this.y) {
+				this.y+=this.speed;
+			}
 
-		if (keys[key.down] || keys[key.s]) {
-			this.y+= this.speed;
-		}
-	}.bind(this);
+			if (ball.y <= this.y) {
+				this.y-=this.speed;
+			}
+		}.bind(this);
+	} else {
+		this.update = function(keys, ball) {
+			if (keys[key.up] || keys[key.w]) {
+				if (this.y >= 0)
+					this.y-= this.speed;
+			}
+
+			if (keys[key.down] || keys[key.s]) {
+				if (this.y + this.height <= game.height)
+				this.y+= this.speed;
+			}
+		}.bind(this);
+	}
 
 };
 
@@ -109,8 +130,8 @@ function Pong() {
   			this.keys[e.keyCode] = false;
 		}.bind(this));	
 		
-		var leftBar = new Paddle(10, 10, this.ctx)
-		var rightBar = new Paddle(this.canvas.width - 20, 10, this.ctx);
+		var leftBar = new Paddle(10, 10, this.ctx, false, game)
+		var rightBar = new Paddle(this.canvas.width - 20, 10, this.ctx, true, game);
 
 		var ball = new Ball(game.width / 2, game.height / 2, this.ctx, game);
 		
@@ -122,19 +143,25 @@ function Pong() {
 
 			game.ctx.fillRect(game.canvas.width/2, 0, 2, game.canvas.height);
 
-			if (leftBar.x <= ball.x && leftBar.x + 10 >= ball.x) {
-				if (leftBar.y <= ball.y && leftBar.y + 50 >= ball.y) {
+			leftBar.render();
+			rightBar.render();	
+			ball.render();
+
+			leftBar.update(game.keys, ball);
+			rightBar.update(game.keys, ball);
+
+			if (leftBar.x <= ball.x - 5 && leftBar.x + 10 >= ball.x - 5) {
+				if (leftBar.y <= ball.y + 5 && leftBar.y + 50 >= ball.y + 5) {
 					ball.reverse();	
 				}
 			}
 
-			if (rightBar.x <= ball.x && rightBar.x + 10 >= ball.x) {
-				if (rightBar.y <= ball.y && rightBar.y + 50 >= ball.y) {
+			if (rightBar.x <= ball.x + 5 && rightBar.x + 10 >= ball.x + 5) {
+				if (rightBar.y <= ball.y + 5 && rightBar.y + 50 >= ball.y + 5) {
 					ball.reverse();	
 				}
 			}
 
-			leftBar.update(game.keys);
 			ball.update();	
 
 			if (ball.x <= 0) {
@@ -147,12 +174,6 @@ function Pong() {
 				ball.reset();
 			}
 
-			rightBar.update(game.keys);
-			
-
-			leftBar.render();
-			rightBar.render();	
-			ball.render();
 			
 			game.ctx.font='30px "Lucida Console", Monaco, monospace';
 			var scoreX = (game.width / 2) - 30;
