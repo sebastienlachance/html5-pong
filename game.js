@@ -1,3 +1,7 @@
+function getRandomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1) + min);
+}
+
 var key = {
 	up: 38,
 	down: 40,
@@ -6,13 +10,29 @@ var key = {
 }
 
 function Ball(x, y, ctx, game) {
+	this.startingX = x;
+	this.startingY = y;
 	this.x = x;
 	this.y = y;
 	this.vx = 1;
 	this.vy = 1;
-	this.speed = 3;
+	this.speed = 4;
 	this.ctx = ctx;
 	this.game = game;
+
+	this.reset = function() {
+		this.x = this.startingX;
+		this.y = this.startingY;
+
+		this.vx = getRandomInt(1, 2) == 1 ? 1 : -1;
+		this.vy = getRandomInt(1, 2) == 1 ? 1 : -1; 
+		
+	}.bind(this);
+
+	this.reverse = function() {
+		this.vx = -this.vx;
+		this.vy = -this.vy;
+	}.bind(this);
 
 	this.render = function() {
 		this.ctx.beginPath();
@@ -49,11 +69,12 @@ function Paddle(x, y, ctx) {
 	this.ctx = ctx;
 	this.x = x;
 	this.y = y;
-	this.speed = 3;
+	this.speed = 5;
+	this.score = 0;
 
 	this.render = function() {
 		this.ctx.fillStyle = "green";
-		this.ctx.fillRect(this.x, this.y, 5, 40);
+		this.ctx.fillRect(this.x, this.y, 5, 50);
 	}.bind(this);
 
 	this.update = function(keys) {
@@ -99,13 +120,49 @@ function Pong() {
 			requestAnimationFrame(animloop);
 			game.clearCanvas();
 
-			  game.ctx.fillRect(game.canvas.width/2, 0, 2, game.canvas.height);
+			game.ctx.fillRect(game.canvas.width/2, 0, 2, game.canvas.height);
+
+			if (leftBar.x <= ball.x && leftBar.x + 10 >= ball.x) {
+				if (leftBar.y <= ball.y && leftBar.y + 50 >= ball.y) {
+					ball.reverse();	
+				}
+			}
+
+			if (rightBar.x <= ball.x && rightBar.x + 10 >= ball.x) {
+				if (rightBar.y <= ball.y && rightBar.y + 50 >= ball.y) {
+					ball.reverse();	
+				}
+			}
 
 			leftBar.update(game.keys);
 			ball.update();	
+
+			if (ball.x <= 0) {
+				rightBar.score++;
+				ball.reset();
+			}
+
+			if (ball.x >= game.width) {
+				leftBar.score++;
+				ball.reset();
+			}
+
+			rightBar.update(game.keys);
+			
+
 			leftBar.render();
 			rightBar.render();	
 			ball.render();
+			
+			game.ctx.font='30px "Lucida Console", Monaco, monospace';
+			var scoreX = (game.width / 2) - 30;
+			if (leftBar.score > 9) {
+				scoreX -= 10;
+			}
+
+			game.ctx.fillText(leftBar.score, scoreX, 40);
+			game.ctx.fillText(rightBar.score, (game.width / 2) + 15, 40);
+
 		})();
 		
 	};
