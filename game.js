@@ -5,16 +5,41 @@ var key = {
 	s: 83,
 }
 
-function Ball(x, y, ctx) {
+function Ball(x, y, ctx, game) {
 	this.x = x;
 	this.y = y;
+	this.vx = 1;
+	this.vy = 1;
 	this.ctx = ctx;
+	this.game = game;
 
 	this.render = function() {
 		this.ctx.beginPath();
 		this.ctx.arc(this.x, this.y, 5,0,2*Math.PI);
 		this.ctx.closePath();
 		this.ctx.fill();
+	}.bind(this);
+
+	this.update = function() {
+		this.x += this.vx;
+		this.y += this.vy;	
+
+		if (this.x > this.game.width) {
+			this.vx = -1;
+		}
+
+		if (this.y > this.game.height) {
+			this.vy = -1;
+		}
+
+		if (this.x == 0) {
+			this.vx = 1;
+		}
+
+		if (this.y == 0) {
+			this.vy = 1;
+		}
+
 	}.bind(this);
 }
 
@@ -46,6 +71,8 @@ function Pong() {
 	this.canvas = document.getElementById('gameCanvas');
 	this.ctx = this.canvas.getContext('2d');
 	this.keys = [];
+	this.width = this.canvas.width;
+	this.height = this.canvas.height;
 
 	var game = this;
 
@@ -61,7 +88,8 @@ function Pong() {
 		
 		var leftBar = new Paddle(10, 10, this.ctx)
 		var rightBar = new Paddle(this.canvas.width - 20, 10, this.ctx);
-		var ball = new Ball(50, 50, this.ctx);
+
+		var ball = new Ball(game.width / 2, game.height / 2, this.ctx, game);
 		
 
 
@@ -72,6 +100,7 @@ function Pong() {
 			  game.ctx.fillRect(game.canvas.width/2, 0, 2, game.canvas.height);
 
 			leftBar.update(game.keys);
+			ball.update();	
 			leftBar.render();
 			rightBar.render();	
 			ball.render();
