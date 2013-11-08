@@ -49,6 +49,7 @@ function Paddle(x, y, ctx) {
 	this.ctx = ctx;
 	this.x = x;
 	this.y = y;
+	this.speed = 3;
 
 	this.render = function() {
 		this.ctx.fillStyle = "green";
@@ -57,11 +58,11 @@ function Paddle(x, y, ctx) {
 
 	this.update = function(keys) {
 		if (keys[key.up] || keys[key.w]) {
-			this.y--;
+			this.y-= this.speed;
 		}
 
 		if (keys[key.down] || keys[key.s]) {
-			this.y++;
+			this.y+= this.speed;
 		}
 	}.bind(this);
 
