@@ -143,8 +143,8 @@ function Paddle(x, y, ctx, aiControlled, game) {
 	this.speed = 5;
 	this.score = 0;
 	this.aiControlled = aiControlled;
-	this.height = 70;
-	this.width = 5;
+	this.height = 90;
+	this.width = 8;
 
 	this.render = function() {
 		game.ctx.fillStyle = "rgb(0, 100, 100)";
@@ -199,6 +199,8 @@ function Pong() {
 	}
 
 	this.start = function() {
+		var background = new Audio("Hot_Heat.mp3"); // buffers automatically when created
+		background.play();
 
 		window.addEventListener("keydown", function (e) {
   			this.keys[e.keyCode] = true;
@@ -208,8 +210,8 @@ function Pong() {
   			this.keys[e.keyCode] = false;
 		}.bind(this));	
 		
-		var leftBar = new Paddle(10, 10, this.ctx, false, game)
-		var rightBar = new Paddle(this.canvas.width - 20, 10, this.ctx, true, game);
+		var leftBar = new Paddle(30, 10, this.ctx, false, game)
+		var rightBar = new Paddle(this.canvas.width - 50, 10, this.ctx, true, game);
 
 		var ball = new Ball(game.width / 2, game.height / 2, this.ctx, game);
 		
@@ -239,6 +241,9 @@ function Pong() {
 
 		                game.createParticles(ball.x, ball.y)
 
+		                var snd = new Audio("scifi002.wav"); // buffers automatically when created
+						snd.play();
+
             		}
         		}
     		} else {
@@ -251,7 +256,9 @@ function Pong() {
                 		ball.x = leftBar.x + leftBar.width;
                 		ball.y = Math.floor(ball.y - (ball.vy * ball.speed) + (ball.vy * ball.speed)*k);
 
-                		game.createParticles(ball.x, ball.y)
+                		game.createParticles(ball.x, ball.y);
+                		   var snd = new Audio("scifi002.wav"); // buffers automatically when created
+						snd.play();
             		}
         		}
     		}
