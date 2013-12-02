@@ -1,3 +1,18 @@
+var   b2Vec2 = Box2D.Common.Math.b2Vec2
+    ,	b2BodyDef = Box2D.Dynamics.b2BodyDef
+    ,	b2Body = Box2D.Dynamics.b2Body
+    ,	b2FixtureDef = Box2D.Dynamics.b2FixtureDef
+    ,	b2Fixture = Box2D.Dynamics.b2Fixture
+    ,	b2World = Box2D.Dynamics.b2World
+    ,	b2MassData = Box2D.Collision.Shapes.b2MassData
+    ,	b2PolygonShape = Box2D.Collision.Shapes.b2PolygonShape
+    ,	b2CircleShape = Box2D.Collision.Shapes.b2CircleShape
+    ,	b2DebugDraw = Box2D.Dynamics.b2DebugDraw
+    ;
+
+
+var SCALE = 30;
+
 function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1) + min);
 }
@@ -6,8 +21,8 @@ var key = {
 	up: 38,
 	down: 40,
 	w: 87,
-	s: 83,
-}
+	s: 83
+};
 
 //Borrowed from TheCodePlayer
 function Particle( x, y, particles ) {
@@ -40,13 +55,13 @@ function Particle( x, y, particles ) {
 	// set how fast the particle fades out
 	this.decay = getRandomInt( 0.015, 0.03 );
 
-	Particle.prototype.render = function(ctx) {
-		ctx.beginPath();
+	Particle.prototype.render = function(context) {
+		context.beginPath();
 	// move to the last tracked coordinates in the set, then draw a line to the current x and y
-		ctx.moveTo( this.coordinates[ this.coordinates.length - 1 ][ 0 ], this.coordinates[ this.coordinates.length - 1 ][ 1 ] );
-		ctx.lineTo( this.x, this.y );
-		ctx.strokeStyle = 'hsla(' + this.hue + ', 100%, ' + this.brightness + '%, ' + this.alpha + ')';
-		ctx.stroke();
+		context.moveTo( this.coordinates[ this.coordinates.length - 1 ][ 0 ], this.coordinates[ this.coordinates.length - 1 ][ 1 ] );
+		context.lineTo( this.x, this.y );
+		context.strokeStyle = 'hsla(' + this.hue + ', 100%, ' + this.brightness + '%, ' + this.alpha + ')';
+		context.stroke();
 	};
 
 	Particle.prototype.update = function( index ) {
@@ -84,14 +99,31 @@ function Ball(x, y, game) {
 	this.width = 15;
 	this.height = 15;
 
-	Ball.prototype.reset = function() {
+    var fixDef = new b2FixtureDef();
+    fixDef.shape = new b2CircleShape();
+    var bodyDef = new b2BodyDef();
+    bodyDef.type = b2Body.b2_dynamicBody;
+    bodyDef.position.x = this.x / SCALE;
+    bodyDef.position.y = this.y / SCALE;
+
+    this.definitions = {
+        fixDef: fixDef,
+        bodyDef: bodyDef
+    };
+
+
+    Ball.prototype.reset = function() {
 		this.x = this.startingX;
 		this.y = this.startingY;
 
-		this.vx = getRandomInt(1, 2) == 1 ? 1 : -1;
+        this.vx = getRandomInt(1, 2) == 1 ? 1 : -1;
 		this.vy = getRandomInt(1, 2) == 1 ? 1 : -1; 
 
 		this.speed = this.startingSpeed;
+        this.body.SetPosition(new b2Vec2(this.x / 30, this.y / 30));
+        this.body.SetLinearVelocity(new b2Vec2(this.vx * this.speed, this.vy * this.speed));
+
+
 	};
 
 	Ball.prototype.reverse = function() {
@@ -101,21 +133,29 @@ function Ball(x, y, game) {
 	};
 
 	Ball.prototype.render = function(context) {
+        var position = this.body.GetPosition();
+        x = position.x * SCALE;
+        y = position.y * SCALE;
+
 		context.globalCompositeOperation = "lighter";
 
 		context.beginPath();
-		var gradient = context.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.width);
+		var gradient = context.createRadialGradient(x, y, 0, x, y, this.width);
 		gradient.addColorStop(0, "white");
 		gradient.addColorStop(0.4, "white");
 		gradient.addColorStop(0.4, "red");
 		gradient.addColorStop(1, "black");
 		
 		context.fillStyle = gradient;
-		context.arc(this.x, this.y, this.width, Math.PI*2, false);
+		context.arc(x, y, this.width, Math.PI*2, false);
 		context.fill();
 	};
 
 	Ball.prototype.update = function() {
+
+        var position = this.body.GetPosition();
+        x = position.x * SCALE;
+        y = position.y * SCALE;
 
 		var rightPaddle = this.game.rightPaddle;
 		var leftPaddle = this.game.leftPaddle;
@@ -123,16 +163,16 @@ function Ball(x, y, game) {
 
 		//collision detection
 		if (ball.vx > 0) {
-        	if (rightPaddle.x <= ball.x + ball.width / 2 && rightPaddle.x > ball.x - (ball.vx * ball.speed) + ball.width / 2) {
-            	var collisionDiff = ball.x + ball.width / 2 - rightPaddle.x;
+        	if (rightPaddle.x <= x + ball.width / 2 && rightPaddle.x > x - (ball.vx * ball.speed) + ball.width / 2) {
+            	var collisionDiff = x + ball.width / 2 - rightPaddle.x;
             	var k = collisionDiff/(ball.vx * ball.speed);
-            	var y = (ball.vy * ball.speed )*k + (ball.y - (ball.vy* ball.speed));
+            	var y = (ball.vy * ball.speed )*k + (y - (ball.vy* ball.speed));
             	if (y >= rightPaddle.y && y + ball.height <= rightPaddle.y + rightPaddle.height) {
             		ball.reverse();
-            		ball.x = rightPaddle.x - ball.width;
-		            ball.y = Math.floor(ball.y - (ball.vy * ball.speed) + (ball.vy * ball.speed)*k);
+            		x = rightPaddle.x - ball.width;
+		            y = Math.floor(y - (ball.vy * ball.speed) + (ball.vy * ball.speed)*k);
 
-		            game.particles.generate(ball.x, ball.y);
+		            game.particles.generate(x, y);
 		            
 		            if (this.game.audioEnabled) {
 		            	var snd = new Audio("scifi002.wav"); // buffers automatically when created
@@ -141,16 +181,16 @@ function Ball(x, y, game) {
             	}
         	}
     	} else {
-        	if (leftPaddle.x + leftPaddle.width >= ball.x) {
-        		var collisionDiff = leftPaddle.x + leftPaddle.width / 2 - ball.x;
+        	if (leftPaddle.x + leftPaddle.width >= x) {
+        		var collisionDiff = leftPaddle.x + leftPaddle.width / 2 - x;
         		var k = collisionDiff/-(ball.vx * ball.speed);
-        		var y = (ball.vy * ball.speed) * k + (ball.y - (ball.vy * ball.speed));
+        		var y = (ball.vy * ball.speed) * k + (y - (ball.vy * ball.speed));
         		if (y >= leftPaddle.y && y + ball.height <= leftPaddle.y + leftPaddle.height) {
             		ball.reverse();
-            		ball.x = leftPaddle.x + leftPaddle.width;
-            		ball.y = Math.floor(ball.y - (ball.vy * ball.speed) + (ball.vy * ball.speed)*k);
+            		x = leftPaddle.x + leftPaddle.width;
+            		y = Math.floor(y - (ball.vy * ball.speed) + (ball.vy * ball.speed)*k);
 
-            		game.particles.generate(ball.x, ball.y);
+            		game.particles.generate(x, y);
 
             		if (this.game.audioEnabled) {
             			var snd = new Audio("scifi002.wav"); // buffers automatically when created
@@ -160,33 +200,14 @@ function Ball(x, y, game) {
         	}
     	}
 
-    	if (ball.x <= 0) {
+    	if (x <= 0) {
 			rightPaddle.score++;
 			ball.reset();
 		}
 
-		if (ball.x >= game.width) {
+		if (x >= game.width) {
 			leftPaddle.score++;
 			ball.reset();
-		}
-
-		this.x += this.vx * this.speed;
-		this.y += this.vy * this.speed;	
-
-		if (this.x > this.game.width) {
-			this.vx = -1;
-		}
-
-		if (this.y > this.game.height) {
-			this.vy = -this.vy;
-		}
-
-		if (this.x <= 0) {
-			this.vx = 1;
-		}
-
-		if (this.y <= 0) {
-			this.vy = -this.vy;
 		}
 
 	};
@@ -303,7 +324,10 @@ function Particles() {
 }
 
 function Game() {
-	this.canvas = document.getElementById('gameCanvas');
+    //Create the world
+    this.world = new b2World(new b2Vec2(0, 0),  true);
+
+    this.canvas = document.getElementById('gameCanvas');
 	this.context = this.canvas.getContext('2d');
 	this.keys = [];
 	this.width = this.canvas.width;
@@ -334,13 +358,21 @@ function Game() {
 		this.separation = new SeparationLine(this.canvas);
 		this.particles = new Particles();
 
+
+
 		this.entities.push(this.separation);
 		this.entities.push(this.leftPaddle);	
 		this.entities.push(this.rightPaddle);
-		this.entities.push(this.ball);
+        game.addToWorld(this.ball);
 		this.entities.push(this.particles);
 		this.entities.push(this.score);
-		
+
+        //Create ceiling
+        //Create floor
+        this.addCeiling();
+        this.addFloor();
+
+        this.ball.reset();
 		
 		var frame = 1;
 		(function animloop(time){
@@ -352,6 +384,14 @@ function Game() {
 		})();
 		
 	};
+
+    Game.prototype.addToWorld = function(entity) {
+        var body = this.world.CreateBody(entity.definitions.bodyDef);
+        body.CreateFixture(entity.definitions.fixDef)
+        entity.body = body;
+
+        this.entities.push(entity);
+    };
 
 	Game.prototype.clearCanvas = function() {
 		this.context.save();
@@ -372,7 +412,10 @@ function Game() {
 	};
 
 	Game.prototype.update = function() {
-		for(var i = 0; i < this.entities.length; i++) {
+        this.world.Step(1 / 60,  10,  10);
+        this.world.ClearForces();
+
+        for(var i = 0; i < this.entities.length; i++) {
 			this.entities[i].update();
 		}
 	};
@@ -385,6 +428,40 @@ function Game() {
 			this.backgroundMusic.pause();	
 		}
 	};
+
+    Game.prototype.addCeiling = function() {
+        var bodyDef = new b2BodyDef();
+        bodyDef.type = b2Body.b2_staticBody;
+        bodyDef.position.x = this.width / 2 / SCALE;
+        bodyDef.position.y = 0;
+
+        var fixDef = new b2FixtureDef();
+        fixDef.shape = new b2PolygonShape();
+        fixDef.shape.SetAsBox(this.width / SCALE / 2,  10 / SCALE / 2);
+
+        fixDef.density = 1.0;
+        fixDef.friction = 0;
+        fixDef.restitution = 1;
+
+        this.world.CreateBody(bodyDef).CreateFixture(fixDef);
+    };
+
+    Game.prototype.addFloor = function() {
+        var bodyDef = new b2BodyDef();
+        bodyDef.type = b2Body.b2_staticBody;
+        bodyDef.position.x = this.width / 2 / SCALE;
+        bodyDef.position.y = this.height / SCALE;
+
+        var fixDef = new b2FixtureDef();
+        fixDef.shape = new b2PolygonShape();
+        fixDef.shape.SetAsBox(this.width / SCALE / 2, 10 / SCALE / 2);
+
+        fixDef.density = 1.0;
+        fixDef.friction = 0;
+        fixDef.restitution = 1;
+
+        this.world.CreateBody(bodyDef).CreateFixture(fixDef);
+    };
 };
 
 var game = new Game();
