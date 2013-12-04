@@ -8,6 +8,7 @@ var   b2Vec2 = Box2D.Common.Math.b2Vec2
     ,	b2PolygonShape = Box2D.Collision.Shapes.b2PolygonShape
     ,	b2CircleShape = Box2D.Collision.Shapes.b2CircleShape
     ,	b2DebugDraw = Box2D.Dynamics.b2DebugDraw
+    ,   b2WorldManifold = Box2D.Collision.b2WorldManifold
     ;
 
 
@@ -101,10 +102,15 @@ function Ball(x, y, game) {
 
     var fixDef = new b2FixtureDef();
     fixDef.shape = new b2CircleShape();
+    fixDef.shape.SetRadius(0.2);
     var bodyDef = new b2BodyDef();
     bodyDef.type = b2Body.b2_dynamicBody;
     bodyDef.position.x = this.x / SCALE;
     bodyDef.position.y = this.y / SCALE;
+    bodyDef.userData = {
+        id: 'ball',
+        ent: this
+    }
 
     this.definitions = {
         fixDef: fixDef,
@@ -154,8 +160,12 @@ function Ball(x, y, game) {
 	Ball.prototype.update = function() {
 
         var position = this.body.GetPosition();
+
         x = position.x * SCALE;
         y = position.y * SCALE;
+
+        this.x = x;
+        this.y = y;
 
 		var rightPaddle = this.game.rightPaddle;
 		var leftPaddle = this.game.leftPaddle;
@@ -219,7 +229,7 @@ function Paddle(x, y, aiControlled, game, ball, keys) {
 
 	this.x = x;
 	this.y = y;
-	this.speed = 5;
+	this.speed = 10;
 	this.score = 0;
 	this.aiControlled = aiControlled;
 	this.height = 90;
@@ -227,32 +237,60 @@ function Paddle(x, y, aiControlled, game, ball, keys) {
 	this.ball = ball;
 	this.keys = keys;
 
+    var fixDef = new b2FixtureDef();
+    fixDef.shape = new b2PolygonShape();
+    fixDef.shape.SetAsBox(this.width / SCALE / 2, this.height / SCALE / 2);
+    var bodyDef = new b2BodyDef();
+    bodyDef.type = b2Body.b2_kinematicBody;
+    bodyDef.position.x = this.x / SCALE;
+    bodyDef.position.y = this.y / SCALE;
+    bodyDef.userData = {
+        id: 'paddle',
+        ent: this
+    }
+
+    fixDef.density = 1.0;
+    fixDef.friction = 0;
+    fixDef.restitution = 1.2;
+
+    this.definitions = {
+        fixDef: fixDef,
+        bodyDef: bodyDef
+    };
+
 	Paddle.prototype.render = function(context) {
 		context.fillStyle = "rgb(0, 100, 100)";
-		context.fillRect(this.x, this.y, this.width, this.height);
+		context.fillRect(this.x - this.width / 2, this.y - this.height / 2, this.width, this.height);
 	};
 
 	if (this.aiControlled) {
 		this.update = function() {
-			if (ball.y >= this.y) {
+			if (this.ball.y >= this.y && (this.y + (this.height / 2) <= game.height)) {
 				this.y+=this.speed;
 			}
 
-			if (ball.y <= this.y) {
+			if (this.ball.y <= this.y && (this.y - (this.height / 2) >= 0)) {
 				this.y-=this.speed;
 			}
+
+            this.body.SetPosition(new b2Vec2(this.x / SCALE, this.y / SCALE))
+
 		}.bind(this);
 	} else {
 		this.update = function() {
+
 			if (keys[key.up] || keys[key.w]) {
-				if (this.y >= 0)
+				if (this.y - (this.height / 2) >= 0)
 					this.y-= this.speed;
 			}
 
 			if (keys[key.down] || keys[key.s]) {
-				if (this.y + this.height <= game.height)
-				this.y+= this.speed;
+				if (this.y + (this.height / 2) <= game.height)
+				    this.y+= this.speed;
 			}
+
+            this.body.SetPosition(new b2Vec2(this.x / SCALE, this.y / SCALE));
+
 		}.bind(this);
 	}
 
@@ -335,6 +373,14 @@ function Game() {
 	this.entities = [];
 	this.backgroundMusic = new Audio("Hot_Heat.mp3"); 
 	this.audioEnabled = false;
+    this.debug = false;
+
+
+
+
+
+
+
 
 	Game.prototype.start = function() {
 		if (this.audioEnabled) {
@@ -352,17 +398,15 @@ function Game() {
 		});	
 
 		this.ball = new Ball(this.width / 2, this.height / 2, game);
-		this.leftPaddle = new Paddle(30, 10, false, game, this.ball, this.keys)
-		this.rightPaddle = new Paddle(this.canvas.width - 50, 10, true, game, this.ball, this.keys);
+		this.leftPaddle = new Paddle(30, this.canvas.height / 2, false, game, this.ball, this.keys)
+		this.rightPaddle = new Paddle(this.canvas.width - 50, this.canvas.height / 2, true, game, this.ball, this.keys);
 		this.score = new Score(game);
 		this.separation = new SeparationLine(this.canvas);
 		this.particles = new Particles();
 
-
-
 		this.entities.push(this.separation);
-		this.entities.push(this.leftPaddle);	
-		this.entities.push(this.rightPaddle);
+        game.addToWorld(this.leftPaddle);
+        game.addToWorld(this.rightPaddle)
         game.addToWorld(this.ball);
 		this.entities.push(this.particles);
 		this.entities.push(this.score);
@@ -372,8 +416,39 @@ function Game() {
         this.addCeiling();
         this.addFloor();
 
+        var b2Listener = Box2D.Dynamics.b2ContactListener;
+
+        var listener = new b2Listener();
+        listener.BeginContact = function(contact) {
+            var entity1 = contact.GetFixtureA().GetBody().GetUserData().id;
+            var entity2 = contact.GetFixtureB().GetBody().GetUserData().id;
+
+            if (entity1 == "paddle" && entity2 == "ball") {
+                var manifold = new b2WorldManifold();
+                contact.GetWorldManifold(manifold);
+                
+               	//Bang!
+               	var position = manifold.m_points[0];
+
+                this.particles.generate(position.x * SCALE, position.y * SCALE);
+            }
+
+        }.bind(this);
+
+        this.world.SetContactListener(listener);
+
         this.ball.reset();
-		
+
+        if (this.debug) {
+            var debugDraw = new b2DebugDraw();
+            debugDraw.SetSprite(this.context);
+            debugDraw.SetDrawScale(SCALE);
+            debugDraw.SetFillAlpha(0.3);
+            debugDraw.SetLineThickness(1.0);
+            debugDraw.SetFlags(b2DebugDraw.e_shapeBit | b2DebugDraw.e_jointBit);
+            this.world.SetDebugDraw(debugDraw);
+        }
+
 		var frame = 1;
 		(function animloop(time){
 			frame++;
@@ -402,12 +477,16 @@ function Game() {
 
 	Game.prototype.render = function() {
 		//this.clearCanvas(); //using globeCompositionOperation
+        if (this.debug) {
+            this.world.DrawDebugData();
+            return;
+        }
+
 		this.context.globalCompositeOperation = "source-over";
 		this.context.fillStyle = "rgba(0, 0, 0, 0.3)";
 		this.context.fillRect(0, 0, this.width, this.height);
-
-		for(var i = 0; i < this.entities.length; i++) {
-			this.entities[i].render(this.context);
+		 for(var i = 0; i < this.entities.length; i++) {
+		   this.entities[i].render(this.context);
 		}
 	};
 
@@ -434,10 +513,15 @@ function Game() {
         bodyDef.type = b2Body.b2_staticBody;
         bodyDef.position.x = this.width / 2 / SCALE;
         bodyDef.position.y = 0;
+        bodyDef.userData = {
+            id: 'ceilling',
+            ent: this
+        }
+
 
         var fixDef = new b2FixtureDef();
         fixDef.shape = new b2PolygonShape();
-        fixDef.shape.SetAsBox(this.width / SCALE / 2,  10 / SCALE / 2);
+        fixDef.shape.SetAsBox(this.width / SCALE / 2,  0.01);
 
         fixDef.density = 1.0;
         fixDef.friction = 0;
@@ -451,10 +535,14 @@ function Game() {
         bodyDef.type = b2Body.b2_staticBody;
         bodyDef.position.x = this.width / 2 / SCALE;
         bodyDef.position.y = this.height / SCALE;
+        bodyDef.userData = {
+            id: 'floor',
+            ent: this
+        }
 
         var fixDef = new b2FixtureDef();
         fixDef.shape = new b2PolygonShape();
-        fixDef.shape.SetAsBox(this.width / SCALE / 2, 10 / SCALE / 2);
+        fixDef.shape.SetAsBox(this.width / SCALE / 2, 0.01);
 
         fixDef.density = 1.0;
         fixDef.friction = 0;
