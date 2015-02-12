@@ -171,45 +171,6 @@ function Ball(x, y, game) {
 		var leftPaddle = this.game.leftPaddle;
 		var ball = this;	
 
-		//collision detection
-		if (ball.vx > 0) {
-        	if (rightPaddle.x <= x + ball.width / 2 && rightPaddle.x > x - (ball.vx * ball.speed) + ball.width / 2) {
-            	var collisionDiff = x + ball.width / 2 - rightPaddle.x;
-            	var k = collisionDiff/(ball.vx * ball.speed);
-            	var y = (ball.vy * ball.speed )*k + (y - (ball.vy* ball.speed));
-            	if (y >= rightPaddle.y && y + ball.height <= rightPaddle.y + rightPaddle.height) {
-            		ball.reverse();
-            		x = rightPaddle.x - ball.width;
-		            y = Math.floor(y - (ball.vy * ball.speed) + (ball.vy * ball.speed)*k);
-
-		            game.particles.generate(x, y);
-		            
-		            if (this.game.audioEnabled) {
-		            	var snd = new Audio("scifi002.wav"); // buffers automatically when created
-						snd.play();
-					}
-            	}
-        	}
-    	} else {
-        	if (leftPaddle.x + leftPaddle.width >= x) {
-        		var collisionDiff = leftPaddle.x + leftPaddle.width / 2 - x;
-        		var k = collisionDiff/-(ball.vx * ball.speed);
-        		var y = (ball.vy * ball.speed) * k + (y - (ball.vy * ball.speed));
-        		if (y >= leftPaddle.y && y + ball.height <= leftPaddle.y + leftPaddle.height) {
-            		ball.reverse();
-            		x = leftPaddle.x + leftPaddle.width;
-            		y = Math.floor(y - (ball.vy * ball.speed) + (ball.vy * ball.speed)*k);
-
-            		game.particles.generate(x, y);
-
-            		if (this.game.audioEnabled) {
-            			var snd = new Audio("scifi002.wav"); // buffers automatically when created
-						snd.play();
-					}
-        		}
-        	}
-    	}
-
     	if (x <= 0) {
 			rightPaddle.score++;
 			ball.reset();
